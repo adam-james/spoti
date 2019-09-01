@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -11,9 +12,14 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/urfave/cli"
 	"github.com/zmb3/spotify"
+	"golang.org/x/oauth2"
 )
 
-const redirectURI = "http://localhost:3000/callback"
+const (
+	redirectURI = "http://localhost:3000/callback"
+	userFile    = "./tmp/user.json"
+	tokenFile   = "./tmp/token.json"
+)
 
 var (
 	auth  = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadPrivate)
@@ -28,17 +34,39 @@ func main() {
 
 	app.Commands = []cli.Command{
 		{
-			Name:  "me",
-			Usage: "Get current user.",
+			Name:  "login",
+			Usage: "Log in to Spotify.",
 			Action: func(c *cli.Context) error {
 				startServer()
 				redirectToLogin()
 
-				// wait for auth to complete
 				client := <-ch
 
-				// use the client to make calls that require authorization
 				user, err := client.CurrentUser()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				json, err := json.MarshalIndent(user, "", "    ")
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				err = ioutil.WriteFile("./tmp/user.json", json, 0600)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				fmt.Println("Logged in as:", user.ID)
+
+				return nil
+			},
+		},
+		{
+			Name:  "me",
+			Usage: "Get current user.",
+			Action: func(c *cli.Context) error {
+				user, err := getUser()
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -60,14 +88,12 @@ func main() {
 					Name:  "list",
 					Usage: "List your playlists.",
 					Action: func(c *cli.Context) error {
-						startServer()
-						redirectToLogin()
+						client, err := getClient()
+						if err != nil {
+							log.Fatal(err)
+						}
 
-						// wait for auth to complete
-						client := <-ch
-
-						// use the client to make calls that require authorization
-						user, err := client.CurrentUser()
+						user, err := getUser()
 						if err != nil {
 							log.Fatal(err)
 						}
@@ -115,7 +141,17 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		log.Fatalf("State mismatch: %s != %s\n", st, state)
 	}
-	// use the token to get an authenticated client
+
+	json, err := json.MarshalIndent(tok, "", "    ")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = ioutil.WriteFile("./tmp/token.json", json, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	client := auth.NewClient(tok)
 	fmt.Fprintf(w, "Login Completed!")
 	ch <- &client
@@ -128,4 +164,24 @@ func redirectToLogin() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func getUser() (spotify.User, error) {
+	var user spotify.User
+	data, err := ioutil.ReadFile(userFile)
+	err = json.Unmarshal(data, &user)
+	return user, err
+}
+
+func getToken() (oauth2.Token, error) {
+	var token oauth2.Token
+	data, err := ioutil.ReadFile(tokenFile)
+	err = json.Unmarshal(data, &token)
+	return token, err
+}
+
+func getClient() (spotify.Client, error) {
+	tok, err := getToken()
+	client := auth.NewClient(&tok)
+	return client, err
 }
