@@ -19,18 +19,8 @@ var (
 )
 
 func main() {
-	http.HandleFunc("/callback", completeAuth)
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Got request for:", r.URL.String())
-	})
-	go http.ListenAndServe(":3000", nil)
-
-	url := auth.AuthURL(state)
-	// TODO this only works on macOS
-	err := exec.Command("open", url).Start()
-	if err != nil {
-		log.Fatal(err)
-	}
+	startServer()
+	redirectToLogin()
 
 	// wait for auth to complete
 	client := <-ch
@@ -41,6 +31,14 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println("You are logged in as:", user.DisplayName)
+}
+
+func startServer() {
+	http.HandleFunc("/callback", completeAuth)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Got request for:", r.URL.String())
+	})
+	go http.ListenAndServe(":3000", nil)
 }
 
 func completeAuth(w http.ResponseWriter, r *http.Request) {
@@ -57,4 +55,13 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	client := auth.NewClient(tok)
 	fmt.Fprintf(w, "Login Completed!")
 	ch <- &client
+}
+
+func redirectToLogin() {
+	url := auth.AuthURL(state)
+	// TODO this only works on macOS
+	err := exec.Command("open", url).Start()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
