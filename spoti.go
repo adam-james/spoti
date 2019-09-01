@@ -1,12 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/urfave/cli"
 	"github.com/zmb3/spotify"
 )
 
@@ -19,18 +22,79 @@ var (
 )
 
 func main() {
-	startServer()
-	redirectToLogin()
+	app := cli.NewApp()
+	app.Name = "spoti"
+	app.Usage = "A CLI for the Spotify Web API."
 
-	// wait for auth to complete
-	client := <-ch
+	app.Commands = []cli.Command{
+		{
+			Name:  "me",
+			Usage: "Get current user.",
+			Action: func(c *cli.Context) error {
+				startServer()
+				redirectToLogin()
 
-	// use the client to make calls that require authorization
-	user, err := client.CurrentUser()
+				// wait for auth to complete
+				client := <-ch
+
+				// use the client to make calls that require authorization
+				user, err := client.CurrentUser()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				json, err := json.MarshalIndent(user, "", "    ")
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				fmt.Println(string(json))
+				return nil
+			},
+		},
+		{
+			Name:  "playlist",
+			Usage: "Manage playlists",
+			Subcommands: []cli.Command{
+				{
+					Name:  "list",
+					Usage: "List your playlists.",
+					Action: func(c *cli.Context) error {
+						startServer()
+						redirectToLogin()
+
+						// wait for auth to complete
+						client := <-ch
+
+						// use the client to make calls that require authorization
+						user, err := client.CurrentUser()
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						playlists, err := client.GetPlaylistsForUser(user.ID)
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						json, err := json.MarshalIndent(playlists, "", "    ")
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						fmt.Println(string(json))
+
+						return nil
+					},
+				},
+			},
+		},
+	}
+
+	err := app.Run(os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("You are logged in as:", user.DisplayName)
 }
 
 func startServer() {
