@@ -2,4 +2,6 @@
 
 A CLI for the Spotify Web API.
 
-##Installation
+## Installation
+
+Create a .env file and add 
