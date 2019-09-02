@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/urfave/cli"
@@ -67,13 +68,42 @@ func main() {
 			Usage: "Get current user.",
 			Action: func(c *cli.Context) error {
 				user := getUser()
+				fmt.Println("Display Name:", user.DisplayName)
+				fmt.Println("ID:", user.ID)
+				return nil
+			},
+		},
+		{
+			Name:  "search",
+			Usage: "Search for tracks.",
+			Action: func(c *cli.Context) error {
+				if len(os.Args) < 3 {
+					log.Fatal("You must provide an search query.")
+				}
+				query := os.Args[2]
+				client := getClient()
 
-				json, err := json.MarshalIndent(user, "", "    ")
+				// TODO Allow playlist, album and artist search.
+				results, err := client.Search(query, spotify.SearchTypeTrack)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				fmt.Println(string(json))
+				for _, track := range results.Tracks.Tracks {
+					fmt.Println()
+					fmt.Println("Name:", track.Name)
+
+					artistNames := make([]string, len(track.Artists))
+					for index, artist := range track.Artists {
+						artistNames[index] = artist.Name
+					}
+
+					fmt.Println("Artists:", strings.Join(artistNames, ", "))
+					fmt.Println("Album:", track.Album.Name)
+					fmt.Println("ID:", track.ID)
+					fmt.Println("URI:", track.URI)
+				}
+
 				return nil
 			},
 		},
@@ -86,7 +116,6 @@ func main() {
 					Usage: "List your playlists.",
 					Action: func(c *cli.Context) error {
 						client := getClient()
-
 						user := getUser()
 
 						playlists, err := client.GetPlaylistsForUser(user.ID)
@@ -94,12 +123,130 @@ func main() {
 							log.Fatal(err)
 						}
 
-						json, err := json.MarshalIndent(playlists, "", "    ")
+						for _, playlist := range playlists.Playlists {
+							fmt.Println()
+							fmt.Println("Name:", playlist.Name)
+							fmt.Println("ID:", playlist.ID)
+							fmt.Println("URI:", playlist.URI)
+						}
+
+						return nil
+					},
+				},
+				{
+					Name:  "details",
+					Usage: "Show details for a single playlists",
+					Action: func(c *cli.Context) error {
+						if len(os.Args) < 4 {
+							log.Fatal("You must provide an ID.")
+						}
+
+						id := spotify.ID(os.Args[3])
+						client := getClient()
+
+						playlist, err := client.GetPlaylist(id)
 						if err != nil {
 							log.Fatal(err)
 						}
 
-						fmt.Println(string(json))
+						printPlaylist(playlist)
+
+						fmt.Println("Tracks:")
+						for _, track := range playlist.Tracks.Tracks {
+							fmt.Println("  - Name:", track.Track.Name)
+							fmt.Println("    ID:", track.Track.ID)
+							fmt.Println("    Added At:", track.AddedAt)
+							fmt.Println("    Added By:", track.AddedBy.DisplayName)
+						}
+
+						return nil
+					},
+				},
+				{
+					Name:  "create",
+					Usage: "Create a playlist",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:  "name",
+							Value: "",
+							Usage: "The name of the playlist.",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						name := c.String("name")
+						if len(name) < 1 {
+							log.Fatal("Name is required.")
+						}
+
+						client := getClient()
+						user := getUser()
+
+						playlist, err := client.CreatePlaylistForUser(user.ID, name, "", true)
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						printPlaylist(playlist)
+
+						return nil
+					},
+				},
+				{
+					Name:  "add-tracks",
+					Usage: "Add tracks to a playlist",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:     "playlistID",
+							Required: true,
+							Usage:    "The playlist ID.",
+						},
+						cli.StringSliceFlag{
+							Name:     "trackID",
+							Required: true,
+							Usage:    "The IDs of the tracks to add to the playlist",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						playlistID := spotify.ID(c.String("playlistID"))
+						client := getClient()
+						trackIDs := getTrackIds(c)
+
+						snapshot, err := client.AddTracksToPlaylist(playlistID, trackIDs...)
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						fmt.Println(snapshot)
+
+						return nil
+					},
+				},
+				{
+					Name:  "remove-tracks",
+					Usage: "Remove tracks from a playlist.",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:     "playlistID",
+							Required: true,
+							Usage:    "The playlist ID.",
+						},
+						cli.StringSliceFlag{
+							Name:     "trackID",
+							Required: true,
+							Usage:    "The IDs of the tracks to remove from the playlist.",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						playlistID := spotify.ID(c.String("playlistID"))
+						trackIDs := getTrackIds(c)
+						client := getClient()
+
+						snapshot, err := client.RemoveTracksFromPlaylist(playlistID, trackIDs...)
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						fmt.Println(snapshot)
 
 						return nil
 					},
@@ -112,6 +259,24 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func getTrackIds(c *cli.Context) []spotify.ID {
+	trackIDs := c.StringSlice(("trackID"))
+	trackIDsConverted := make([]spotify.ID, len(trackIDs))
+	for index, id := range trackIDs {
+		trackIDsConverted[index] = spotify.ID(id)
+	}
+	return trackIDsConverted
+}
+
+func printPlaylist(playlist *spotify.FullPlaylist) {
+	fmt.Println("Name:", playlist.Name)
+	fmt.Println("ID:", playlist.ID)
+	fmt.Println("Owner:", playlist.Owner.DisplayName)
+	fmt.Println("Public:", playlist.IsPublic)
+	fmt.Println("URI:", playlist.URI)
+	fmt.Println("Description:", playlist.Description)
 }
 
 func startServer() {
@@ -193,3 +358,5 @@ func getClient() spotify.Client {
 	client := auth.NewClient(getToken())
 	return client
 }
+
+// TODO reorder tracks in a playlist
