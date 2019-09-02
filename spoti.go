@@ -67,13 +67,8 @@ func main() {
 			Usage: "Get current user.",
 			Action: func(c *cli.Context) error {
 				user := getUser()
-
-				json, err := json.MarshalIndent(user, "", "    ")
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				fmt.Println(string(json))
+				fmt.Println("Display Name:", user.DisplayName)
+				fmt.Println("ID:", user.ID)
 				return nil
 			},
 		},
@@ -86,7 +81,6 @@ func main() {
 					Usage: "List your playlists.",
 					Action: func(c *cli.Context) error {
 						client := getClient()
-
 						user := getUser()
 
 						playlists, err := client.GetPlaylistsForUser(user.ID)
@@ -94,12 +88,46 @@ func main() {
 							log.Fatal(err)
 						}
 
-						json, err := json.MarshalIndent(playlists, "", "    ")
+						for _, playlist := range playlists.Playlists {
+							fmt.Println()
+							fmt.Println("Name:", playlist.Name)
+							fmt.Println("ID:", playlist.ID)
+							fmt.Println("URI:", playlist.URI)
+						}
+
+						return nil
+					},
+				},
+				{
+					Name:  "details",
+					Usage: "Show details for a single playlists",
+					Action: func(c *cli.Context) error {
+						if len(os.Args) < 4 {
+							log.Fatal("You must provide an ID.")
+						}
+
+						id := spotify.ID(os.Args[3])
+						client := getClient()
+
+						playlist, err := client.GetPlaylist(id)
 						if err != nil {
 							log.Fatal(err)
 						}
 
-						fmt.Println(string(json))
+						fmt.Println("Name:", playlist.Name)
+						fmt.Println("ID:", playlist.ID)
+						fmt.Println("Owner:", playlist.Owner.DisplayName)
+						fmt.Println("Public:", playlist.IsPublic)
+						fmt.Println("URI:", playlist.URI)
+						fmt.Println("Description:", playlist.Description)
+
+						fmt.Println("Tracks:")
+						for _, track := range playlist.Tracks.Tracks {
+							fmt.Println("  - Name:", track.Track.Name)
+							fmt.Println("    ID:", track.Track.ID)
+							fmt.Println("    Added At:", track.AddedAt)
+							fmt.Println("    Added By:", track.AddedBy.DisplayName)
+						}
 
 						return nil
 					},
@@ -193,3 +221,6 @@ func getClient() spotify.Client {
 	client := auth.NewClient(getToken())
 	return client
 }
+
+// TODO create playlist
+// TODO edit playlist
