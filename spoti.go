@@ -191,6 +191,41 @@ func main() {
 						return nil
 					},
 				},
+				{
+					Name:  "add-track",
+					Usage: "Add a track to the playlist",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:     "playlistID",
+							Required: true,
+							Usage:    "The playlist id.",
+						},
+						cli.StringSliceFlag{
+							Name:     "trackID",
+							Required: true,
+							Usage:    "The ids of the tracks to add to the playlist",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						playlistID := spotify.ID(c.String("playlistID"))
+						client := getClient()
+
+						trackIDs := c.StringSlice(("trackID"))
+						trackIDsConverted := make([]spotify.ID, len(trackIDs))
+						for index, id := range trackIDs {
+							trackIDsConverted[index] = spotify.ID(id)
+						}
+
+						snapshot, err := client.AddTracksToPlaylist(playlistID, trackIDsConverted...)
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						fmt.Println(snapshot)
+
+						return nil
+					},
+				},
 			},
 		},
 	}
@@ -290,5 +325,4 @@ func getClient() spotify.Client {
 	return client
 }
 
-// TODO add tracks
 // TODO remove tracks
