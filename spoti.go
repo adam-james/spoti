@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/urfave/cli"
@@ -69,6 +70,40 @@ func main() {
 				user := getUser()
 				fmt.Println("Display Name:", user.DisplayName)
 				fmt.Println("ID:", user.ID)
+				return nil
+			},
+		},
+		{
+			Name:  "search",
+			Usage: "Search for tracks.",
+			Action: func(c *cli.Context) error {
+				if len(os.Args) < 3 {
+					log.Fatal("You must provide an search query.")
+				}
+				query := os.Args[2]
+				client := getClient()
+
+				// TODO Allow playlist, album and artist search.
+				results, err := client.Search(query, spotify.SearchTypeTrack)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				for _, track := range results.Tracks.Tracks {
+					fmt.Println()
+					fmt.Println("Name:", track.Name)
+
+					artistNames := make([]string, len(track.Artists))
+					for index, artist := range track.Artists {
+						artistNames[index] = artist.Name
+					}
+
+					fmt.Println("Artists:", strings.Join(artistNames, ", "))
+					fmt.Println("Album:", track.Album.Name)
+					fmt.Println("ID:", track.ID)
+					fmt.Println("URI:", track.URI)
+				}
+
 				return nil
 			},
 		},
@@ -255,5 +290,5 @@ func getClient() spotify.Client {
 	return client
 }
 
-// TODO create playlist
-// TODO edit playlist
+// TODO add tracks
+// TODO remove tracks
