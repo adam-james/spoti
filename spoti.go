@@ -192,31 +192,56 @@ func main() {
 					},
 				},
 				{
-					Name:  "add-track",
-					Usage: "Add a track to the playlist",
+					Name:  "add-tracks",
+					Usage: "Add tracks to a playlist",
 					Flags: []cli.Flag{
 						cli.StringFlag{
 							Name:     "playlistID",
 							Required: true,
-							Usage:    "The playlist id.",
+							Usage:    "The playlist ID.",
 						},
 						cli.StringSliceFlag{
 							Name:     "trackID",
 							Required: true,
-							Usage:    "The ids of the tracks to add to the playlist",
+							Usage:    "The IDs of the tracks to add to the playlist",
 						},
 					},
 					Action: func(c *cli.Context) error {
 						playlistID := spotify.ID(c.String("playlistID"))
 						client := getClient()
+						trackIDs := getTrackIds(c)
 
-						trackIDs := c.StringSlice(("trackID"))
-						trackIDsConverted := make([]spotify.ID, len(trackIDs))
-						for index, id := range trackIDs {
-							trackIDsConverted[index] = spotify.ID(id)
+						snapshot, err := client.AddTracksToPlaylist(playlistID, trackIDs...)
+						if err != nil {
+							log.Fatal(err)
 						}
 
-						snapshot, err := client.AddTracksToPlaylist(playlistID, trackIDsConverted...)
+						fmt.Println(snapshot)
+
+						return nil
+					},
+				},
+				{
+					Name:  "remove-tracks",
+					Usage: "Remove tracks from a playlist.",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:     "playlistID",
+							Required: true,
+							Usage:    "The playlist ID.",
+						},
+						cli.StringSliceFlag{
+							Name:     "trackID",
+							Required: true,
+							Usage:    "The IDs of the tracks to remove from the playlist.",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						playlistID := spotify.ID(c.String("playlistID"))
+						trackIDs := getTrackIds(c)
+						client := getClient()
+
+						snapshot, err := client.RemoveTracksFromPlaylist(playlistID, trackIDs...)
 						if err != nil {
 							log.Fatal(err)
 						}
@@ -234,6 +259,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func getTrackIds(c *cli.Context) []spotify.ID {
+	trackIDs := c.StringSlice(("trackID"))
+	trackIDsConverted := make([]spotify.ID, len(trackIDs))
+	for index, id := range trackIDs {
+		trackIDsConverted[index] = spotify.ID(id)
+	}
+	return trackIDsConverted
 }
 
 func printPlaylist(playlist *spotify.FullPlaylist) {
@@ -325,4 +359,4 @@ func getClient() spotify.Client {
 	return client
 }
 
-// TODO remove tracks
+// TODO reorder tracks in a playlist
