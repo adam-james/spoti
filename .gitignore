@@ -1,3 +1,4 @@
 .env
-tmp
 spoti
+token.json
+user.json

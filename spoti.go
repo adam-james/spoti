@@ -17,8 +17,8 @@ import (
 
 const (
 	redirectURI = "http://localhost:3000/callback"
-	userFile    = "./tmp/user.json"
-	tokenFile   = "./tmp/token.json"
+	userFile    = "./user.json"
+	tokenFile   = "./token.json"
 )
 
 var (
@@ -52,7 +52,7 @@ func main() {
 					log.Fatal(err)
 				}
 
-				err = ioutil.WriteFile("./tmp/user.json", json, 0600)
+				err = ioutil.WriteFile(userFile, json, 0600)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -138,7 +138,7 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	err = ioutil.WriteFile("./tmp/token.json", json, 0600)
+	err = ioutil.WriteFile(tokenFile, json, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
