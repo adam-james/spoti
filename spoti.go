@@ -114,12 +114,7 @@ func main() {
 							log.Fatal(err)
 						}
 
-						fmt.Println("Name:", playlist.Name)
-						fmt.Println("ID:", playlist.ID)
-						fmt.Println("Owner:", playlist.Owner.DisplayName)
-						fmt.Println("Public:", playlist.IsPublic)
-						fmt.Println("URI:", playlist.URI)
-						fmt.Println("Description:", playlist.Description)
+						printPlaylist(playlist)
 
 						fmt.Println("Tracks:")
 						for _, track := range playlist.Tracks.Tracks {
@@ -132,6 +127,35 @@ func main() {
 						return nil
 					},
 				},
+				{
+					Name:  "create",
+					Usage: "Create a playlist",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:  "name",
+							Value: "",
+							Usage: "The name of the playlist.",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						name := c.String("name")
+						if len(name) < 1 {
+							log.Fatal("Name is required.")
+						}
+
+						client := getClient()
+						user := getUser()
+
+						playlist, err := client.CreatePlaylistForUser(user.ID, name, "", true)
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						printPlaylist(playlist)
+
+						return nil
+					},
+				},
 			},
 		},
 	}
@@ -140,6 +164,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func printPlaylist(playlist *spotify.FullPlaylist) {
+	fmt.Println("Name:", playlist.Name)
+	fmt.Println("ID:", playlist.ID)
+	fmt.Println("Owner:", playlist.Owner.DisplayName)
+	fmt.Println("Public:", playlist.IsPublic)
+	fmt.Println("URI:", playlist.URI)
+	fmt.Println("Description:", playlist.Description)
 }
 
 func startServer() {
