@@ -66,10 +66,7 @@ func main() {
 			Name:  "me",
 			Usage: "Get current user.",
 			Action: func(c *cli.Context) error {
-				user, err := getUser()
-				if err != nil {
-					log.Fatal(err)
-				}
+				user := getUser()
 
 				json, err := json.MarshalIndent(user, "", "    ")
 				if err != nil {
@@ -88,15 +85,9 @@ func main() {
 					Name:  "list",
 					Usage: "List your playlists.",
 					Action: func(c *cli.Context) error {
-						client, err := getClient()
-						if err != nil {
-							log.Fatal(err)
-						}
+						client := getClient()
 
-						user, err := getUser()
-						if err != nil {
-							log.Fatal(err)
-						}
+						user := getUser()
 
 						playlists, err := client.GetPlaylistsForUser(user.ID)
 						if err != nil {
@@ -166,22 +157,39 @@ func redirectToLogin() {
 	}
 }
 
-func getUser() (spotify.User, error) {
+func getUser() spotify.User {
 	var user spotify.User
+
 	data, err := ioutil.ReadFile(userFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	err = json.Unmarshal(data, &user)
-	return user, err
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return user
 }
 
-func getToken() (oauth2.Token, error) {
+func getToken() *oauth2.Token {
 	var token oauth2.Token
+
 	data, err := ioutil.ReadFile(tokenFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	err = json.Unmarshal(data, &token)
-	return token, err
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &token
 }
 
-func getClient() (spotify.Client, error) {
-	tok, err := getToken()
-	client := auth.NewClient(&tok)
-	return client, err
+func getClient() spotify.Client {
+	client := auth.NewClient(getToken())
+	return client
 }

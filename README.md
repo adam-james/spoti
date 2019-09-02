@@ -4,7 +4,7 @@ A CLI for the Spotify Web API.
 
 ## Installation
 
-Create a .env file and add the following variables (contact repository owner for app variables):
+Create a .env file and add the following variables:
 
 ```
 SPOTIFY_ID=<spotify_id>
