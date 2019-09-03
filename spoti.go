@@ -31,6 +31,7 @@ var (
 		redirectURI,
 		spotify.ScopeUserReadPrivate,
 		spotify.ScopeUserReadPlaybackState,
+		spotify.ScopeUserModifyPlaybackState,
 	)
 	ch    = make(chan *spotify.Client)
 	state = "abc123"
@@ -162,6 +163,22 @@ func main() {
 						fmt.Println("Playing:", currentlyPlaying.Playing)
 						fmt.Println("Progress:", currentlyPlaying.Progress)
 						fmt.Println("Requested at:", currentlyPlaying.Timestamp)
+
+						return nil
+					},
+				},
+				{
+					Name:  "pause",
+					Usage: "Pause playback on your account.",
+					Action: func(c *cli.Context) error {
+						client := getClient()
+
+						err := client.Pause()
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						fmt.Println("Player paused.")
 
 						return nil
 					},
