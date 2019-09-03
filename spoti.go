@@ -27,7 +27,11 @@ const (
 )
 
 var (
-	auth  = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadPrivate)
+	auth = spotify.NewAuthenticator(
+		redirectURI,
+		spotify.ScopeUserReadPrivate,
+		spotify.ScopeUserReadPlaybackState,
+	)
 	ch    = make(chan *spotify.Client)
 	state = "abc123"
 )
@@ -139,6 +143,25 @@ func main() {
 							fmt.Println("Type:", device.Type)
 							fmt.Println("Volume:", device.Volume)
 						}
+
+						return nil
+					},
+				},
+				{
+					Name:  "currently-playing",
+					Usage: "Get the object currently being played on the user's Spotify account.",
+					Action: func(c *cli.Context) error {
+						client := getClient()
+
+						// TODO this action isn't working? Getting 204 no content in Postman.
+						currentlyPlaying, err := client.PlayerCurrentlyPlaying()
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						fmt.Println("Playing:", currentlyPlaying.Playing)
+						fmt.Println("Progress:", currentlyPlaying.Progress)
+						fmt.Println("Requested at:", currentlyPlaying.Timestamp)
 
 						return nil
 					},
