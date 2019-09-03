@@ -1,5 +1,9 @@
 package main
 
+// TODO get devices
+// TODO play tracks
+// TODO reorder tracks in a playlist
+
 import (
 	"encoding/json"
 	"fmt"
@@ -76,11 +80,15 @@ func main() {
 		{
 			Name:  "search",
 			Usage: "Search for tracks.",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:     "query",
+					Required: true,
+					Usage:    "The search query.",
+				},
+			},
 			Action: func(c *cli.Context) error {
-				if len(os.Args) < 3 {
-					log.Fatal("You must provide an search query.")
-				}
-				query := os.Args[2]
+				query := c.String("query")
 				client := getClient()
 
 				// TODO Allow playlist, album and artist search.
@@ -136,15 +144,18 @@ func main() {
 				{
 					Name:  "details",
 					Usage: "Show details for a single playlists",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:     "playlistID, p",
+							Required: true,
+							Usage:    "The playlist ID.",
+						},
+					},
 					Action: func(c *cli.Context) error {
-						if len(os.Args) < 4 {
-							log.Fatal("You must provide an ID.")
-						}
-
-						id := spotify.ID(os.Args[3])
+						playlistID := spotify.ID(c.String("playlistID"))
 						client := getClient()
 
-						playlist, err := client.GetPlaylist(id)
+						playlist, err := client.GetPlaylist(playlistID)
 						if err != nil {
 							log.Fatal(err)
 						}
@@ -167,9 +178,9 @@ func main() {
 					Usage: "Create a playlist",
 					Flags: []cli.Flag{
 						cli.StringFlag{
-							Name:  "name",
-							Value: "",
-							Usage: "The name of the playlist.",
+							Name:     "name, n",
+							Required: true,
+							Usage:    "The name of the playlist.",
 						},
 					},
 					Action: func(c *cli.Context) error {
@@ -196,12 +207,12 @@ func main() {
 					Usage: "Add tracks to a playlist",
 					Flags: []cli.Flag{
 						cli.StringFlag{
-							Name:     "playlistID",
+							Name:     "playlistID, p",
 							Required: true,
 							Usage:    "The playlist ID.",
 						},
 						cli.StringSliceFlag{
-							Name:     "trackID",
+							Name:     "trackID, t",
 							Required: true,
 							Usage:    "The IDs of the tracks to add to the playlist",
 						},
@@ -226,12 +237,12 @@ func main() {
 					Usage: "Remove tracks from a playlist.",
 					Flags: []cli.Flag{
 						cli.StringFlag{
-							Name:     "playlistID",
+							Name:     "playlistID, p",
 							Required: true,
 							Usage:    "The playlist ID.",
 						},
 						cli.StringSliceFlag{
-							Name:     "trackID",
+							Name:     "trackID, t",
 							Required: true,
 							Usage:    "The IDs of the tracks to remove from the playlist.",
 						},
@@ -358,5 +369,3 @@ func getClient() spotify.Client {
 	client := auth.NewClient(getToken())
 	return client
 }
-
-// TODO reorder tracks in a playlist
