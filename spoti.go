@@ -116,6 +116,36 @@ func main() {
 			},
 		},
 		{
+			Name:  "player",
+			Usage: "Interact with the Spotify player.",
+			Subcommands: []cli.Command{
+				{
+					Name:  "devices",
+					Usage: "List available devices",
+					Action: func(c *cli.Context) error {
+						client := getClient()
+
+						devices, err := client.PlayerDevices()
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						for _, device := range devices {
+							fmt.Println()
+							fmt.Println("ID:", device.ID)
+							fmt.Println("Name:", device.Name)
+							fmt.Println("Active:", device.Active)
+							fmt.Println("Restricted:", device.Restricted)
+							fmt.Println("Type:", device.Type)
+							fmt.Println("Volume:", device.Volume)
+						}
+
+						return nil
+					},
+				},
+			},
+		},
+		{
 			Name:  "playlist",
 			Usage: "Manage playlists",
 			Subcommands: []cli.Command{
