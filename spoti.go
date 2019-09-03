@@ -1,7 +1,5 @@
 package main
 
-// TODO get devices
-// TODO play tracks
 // TODO reorder tracks in a playlist
 
 import (
