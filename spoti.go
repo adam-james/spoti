@@ -87,7 +87,7 @@ func main() {
 			Usage: "Search for tracks.",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:     "query",
+					Name:     "query, q",
 					Required: true,
 					Usage:    "The search query.",
 				},
@@ -179,6 +179,43 @@ func main() {
 						}
 
 						fmt.Println("Player paused.")
+
+						return nil
+					},
+				},
+				{
+					Name:  "play",
+					Usage: "Start or resume playback.",
+					Flags: []cli.Flag{
+						cli.IntFlag{
+							Name:  "positionMS, p",
+							Usage: "The position in ms from which to start playing.",
+						},
+						cli.StringSliceFlag{
+							Name:  "URI, u",
+							Usage: "The URIs of the tracks to play.",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						client := getClient()
+
+						uris := c.StringSlice("URI")
+						urisFinal := make([]spotify.URI, len(uris))
+						for index, uri := range uris {
+							urisFinal[index] = spotify.URI(uri)
+						}
+
+						opts := spotify.PlayOptions{
+							PositionMs: c.Int("positionMS"),
+							URIs:       urisFinal,
+						}
+
+						err := client.PlayOpt(&opts)
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						fmt.Println("Player started or resumed.")
 
 						return nil
 					},
