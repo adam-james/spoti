@@ -27,7 +27,12 @@ const (
 )
 
 var (
-	auth  = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadPrivate)
+	auth = spotify.NewAuthenticator(
+		redirectURI,
+		spotify.ScopeUserReadPrivate,
+		spotify.ScopeUserReadPlaybackState,
+		spotify.ScopeUserModifyPlaybackState,
+	)
 	ch    = make(chan *spotify.Client)
 	state = "abc123"
 )
@@ -82,7 +87,7 @@ func main() {
 			Usage: "Search for tracks.",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:     "query",
+					Name:     "query, q",
 					Required: true,
 					Usage:    "The search query.",
 				},
@@ -113,6 +118,108 @@ func main() {
 				}
 
 				return nil
+			},
+		},
+		{
+			Name:  "player",
+			Usage: "Interact with the Spotify player.",
+			Subcommands: []cli.Command{
+				{
+					Name:  "devices",
+					Usage: "List available devices",
+					Action: func(c *cli.Context) error {
+						client := getClient()
+
+						devices, err := client.PlayerDevices()
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						for _, device := range devices {
+							fmt.Println()
+							fmt.Println("ID:", device.ID)
+							fmt.Println("Name:", device.Name)
+							fmt.Println("Active:", device.Active)
+							fmt.Println("Restricted:", device.Restricted)
+							fmt.Println("Type:", device.Type)
+							fmt.Println("Volume:", device.Volume)
+						}
+
+						return nil
+					},
+				},
+				{
+					Name:  "currently-playing",
+					Usage: "Get the object currently being played on the user's Spotify account.",
+					Action: func(c *cli.Context) error {
+						client := getClient()
+
+						// TODO this action isn't working? Getting 204 no content in Postman.
+						currentlyPlaying, err := client.PlayerCurrentlyPlaying()
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						fmt.Println("Playing:", currentlyPlaying.Playing)
+						fmt.Println("Progress:", currentlyPlaying.Progress)
+						fmt.Println("Requested at:", currentlyPlaying.Timestamp)
+
+						return nil
+					},
+				},
+				{
+					Name:  "pause",
+					Usage: "Pause playback on your account.",
+					Action: func(c *cli.Context) error {
+						client := getClient()
+
+						err := client.Pause()
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						fmt.Println("Player paused.")
+
+						return nil
+					},
+				},
+				{
+					Name:  "play",
+					Usage: "Start or resume playback.",
+					Flags: []cli.Flag{
+						cli.IntFlag{
+							Name:  "positionMS, p",
+							Usage: "The position in ms from which to start playing.",
+						},
+						cli.StringSliceFlag{
+							Name:  "URI, u",
+							Usage: "The URIs of the tracks to play.",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						client := getClient()
+
+						uris := c.StringSlice("URI")
+						urisFinal := make([]spotify.URI, len(uris))
+						for index, uri := range uris {
+							urisFinal[index] = spotify.URI(uri)
+						}
+
+						opts := spotify.PlayOptions{
+							PositionMs: c.Int("positionMS"),
+							URIs:       urisFinal,
+						}
+
+						err := client.PlayOpt(&opts)
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						fmt.Println("Player started or resumed.")
+
+						return nil
+					},
+				},
 			},
 		},
 		{
